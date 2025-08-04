@@ -16,9 +16,21 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const PROD_URL = process.env.CORS_ORIGIN; 
 
-// Middleware
-app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
+const whitelist = ['http://localhost:5173', PROD_URL];
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || whitelist.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes
@@ -29,19 +41,20 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/discussions', discussionRoutes);
 
-
 app.get('/', (req, res) => {
   res.send('SprintLeaf API is running...');
 });
 
-
 app.use(notFound);
 app.use(errorHandler);
 
-connectDB(process.env.MONGO_URI).then(() => {
-  app.listen(PORT, () =>
-    console.log(`🌍 Server listening at http://localhost:${PORT}`)
-  );
-}).catch((err) => {
-  console.error('❌ Failed to connect to DB:', err.message);
-});
+connectDB(process.env.MONGO_URI)
+  .then(() => {
+    console.log('Connected to MongoDB');
+    app.listen(PORT, () =>
+      console.log(` Server listening at http://localhost:${PORT}`)
+    );
+  })
+  .catch((err) => {
+    console.error(' Failed to connect to DB:', err.message);
+  });
